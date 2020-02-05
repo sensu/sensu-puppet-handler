@@ -8,17 +8,14 @@ import (
 	"github.com/sensu/sensu-go/types"
 )
 
-type HandlerConfig struct {
+// Handler represents the sensu-puppet-handler plugin
+type Handler struct {
 	sensu.PluginConfig
-	Example string
-}
-
-type ConfigOptions struct {
-	Example sensu.PluginConfigOption
+	endpoint string
 }
 
 var (
-	handlerConfig = HandlerConfig{
+	handler = Handler{
 		PluginConfig: sensu.PluginConfig{
 			Name:     "sensu-puppet-handler",
 			Short:    "Deregister Sensu entities without an associated Puppet node",
@@ -27,36 +24,32 @@ var (
 		},
 	}
 
-	handlerConfigOptions = ConfigOptions{
-		Example: sensu.PluginConfigOption{
-			Path:      "example",
-			Env:       "HANDLER_EXAMPLE",
-			Argument:  "example",
+	options = []*sensu.PluginConfigOption{
+		&sensu.PluginConfigOption{
+			Path:      "endpoint",
+			Env:       "PUPPET_ENDPOINT",
+			Argument:  "endpoint",
 			Shorthand: "e",
 			Default:   "",
-			Usage:     "An example configuration option",
-			Value:     &handlerConfig.Example,
+			Usage:     "The PuppetDB API endpoint (URL). If an API path is not specified, /pdb/query/v4/nodes/ will be used",
+			Value:     &handler.endpoint,
 		},
-	}
-
-	options = []*sensu.PluginConfigOption{
-		&handlerConfigOptions.Example,
 	}
 )
 
 func main() {
-	handler := sensu.NewGoHandler(&handlerConfig.PluginConfig, options, checkArgs, executeHandler)
+	handler := sensu.NewGoHandler(&handler.PluginConfig, options, checkArgs, executeHandler)
 	handler.Execute()
 }
 
 func checkArgs(_ *types.Event) error {
-	if len(handlerConfig.Example) == 0 {
+	if len(handler.endpoint) == 0 {
 		return fmt.Errorf("--example or HANDLER_EXAMPLE environment variable is required")
 	}
 	return nil
 }
 
 func executeHandler(event *types.Event) error {
-	log.Println("executing handler with --example", handlerConfig.Example)
+	log.Println("executing handler")
 	return nil
 }
