@@ -1,7 +1,5 @@
 builds:
-  # List of builds
-  - # First Build
-    env:
+  - env:
     - CGO_ENABLED=0
     main: main.go
     ldflags: '-s -w -X github.com/sensu-community/sensu-plugin-sdk/version.build={{.Version}} -X github.com/sensu-community/sensu-plugin-sdk/version.commit={{.Commit}} -X github.com/sensu-community/sensu-plugin-sdk/version.date={{.Date}}'

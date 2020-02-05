@@ -1,4 +1,4 @@
-module github.com/{{ .GithubUser }}/{{ .GithubProject }}
+module github.com/sensu/sensu-puppet-handler
 
 go 1.13
 

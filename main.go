@@ -20,10 +20,10 @@ type ConfigOptions struct {
 var (
 	handlerConfig = HandlerConfig{
 		PluginConfig: sensu.PluginConfig{
-			Name:     "{{ .Name }}",
-			Short:    "{{ .Description }}",
+			Name:     "sensu-puppet-handler",
+			Short:    "Deregister Sensu entities without an associated Puppet node",
 			Timeout:  10,
-			Keyspace: "sensu.io/plugins/{{ .Name }}/config",
+			Keyspace: "sensu.io/plugins/sensu-puppet-handler/config",
 		},
 	}
 
