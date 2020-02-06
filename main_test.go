@@ -9,9 +9,10 @@ func TestMain(t *testing.T) {
 
 func Test_validate(t *testing.T) {
 	tests := []struct {
-		name        string
-		testHandler Handler
-		wantErr     bool
+		name         string
+		testHandler  Handler
+		wantEndpoint string
+		wantErr      bool
 	}{
 		{
 			name:        "required endpoint",
@@ -63,12 +64,39 @@ func Test_validate(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "valid endpoint is required",
+			testHandler: Handler{
+				endpoint:           "foo",
+				keystoreFile:       "keystore.jks",
+				keystorePassword:   "P@ssw0rd!",
+				truststoreFile:     "truststore.jks",
+				truststorePassword: "P@ssw0rd!",
+			},
+			wantErr: true,
+		},
+		{
+			name: "default API path is appended if missing",
+			testHandler: Handler{
+				endpoint:           "http://127.0.0.1/",
+				keystoreFile:       "keystore.jks",
+				keystorePassword:   "P@ssw0rd!",
+				truststoreFile:     "truststore.jks",
+				truststorePassword: "P@ssw0rd!",
+			},
+			wantErr:      false,
+			wantEndpoint: "http://127.0.0.1/pdb/query/v4/nodes",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			handler = tt.testHandler
 			if err := validate(nil); (err != nil) != tt.wantErr {
 				t.Errorf("validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantEndpoint != "" && tt.wantEndpoint != handler.endpoint {
+				t.Errorf("validate() endpoint = %v, want %v", handler.endpoint, tt.wantEndpoint)
 			}
 		})
 	}

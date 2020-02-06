@@ -2,6 +2,9 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"net/url"
+	"path"
 
 	"github.com/sensu-community/sensu-plugin-sdk/sensu"
 	"github.com/sensu/sensu-go/types"
@@ -18,6 +21,10 @@ type Handler struct {
 	httpProxy          string
 	timeout            int
 }
+
+const (
+	defaultAPIPath = "pdb/query/v4/nodes"
+)
 
 var (
 	handler = Handler{
@@ -89,24 +96,34 @@ func main() {
 }
 
 func validate(_ *types.Event) error {
+	// Make sure all required options are provided
 	if handler.endpoint == "" {
 		return errors.New("the PuppetDB API endpoint is required")
 	}
-
 	if handler.keystoreFile == "" {
 		return errors.New("the path to the SSL certificate keystore is required")
 	}
-
 	if handler.keystorePassword == "" {
 		return errors.New("the SSL certificate keystore password is required")
 	}
-
 	if handler.truststoreFile == "" {
 		return errors.New("the path for the SSL certificate truststore is required")
 	}
-
 	if handler.truststorePassword == "" {
 		return errors.New("the SSL certificate truststore password is required")
+	}
+
+	// Make sure the endpoint URL is valid
+	u, err := url.Parse(handler.endpoint)
+	if err != nil {
+		return fmt.Errorf("invalid PuppetDB API endpoint URL: %s", err)
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return errors.New("invalid PuppetDB API endpoint URL")
+	}
+	if u.Path == "" || u.Path == "/" {
+		u.Path = path.Join(u.Path, defaultAPIPath)
+		handler.endpoint = u.String()
 	}
 
 	return nil
