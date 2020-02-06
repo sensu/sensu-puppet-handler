@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"errors"
 
 	"github.com/sensu-community/sensu-plugin-sdk/sensu"
 	"github.com/sensu/sensu-go/types"
@@ -85,18 +84,34 @@ var (
 )
 
 func main() {
-	handler := sensu.NewGoHandler(&handler.PluginConfig, options, checkArgs, executeHandler)
+	handler := sensu.NewGoHandler(&handler.PluginConfig, options, validate, executeHandler)
 	handler.Execute()
 }
 
-func checkArgs(_ *types.Event) error {
-	if len(handler.endpoint) == 0 {
-		return fmt.Errorf("--example or HANDLER_EXAMPLE environment variable is required")
+func validate(_ *types.Event) error {
+	if handler.endpoint == "" {
+		return errors.New("the PuppetDB API endpoint is required")
 	}
+
+	if handler.keystoreFile == "" {
+		return errors.New("the path to the SSL certificate keystore is required")
+	}
+
+	if handler.keystorePassword == "" {
+		return errors.New("the SSL certificate keystore password is required")
+	}
+
+	if handler.truststoreFile == "" {
+		return errors.New("the path for the SSL certificate truststore is required")
+	}
+
+	if handler.truststorePassword == "" {
+		return errors.New("the SSL certificate truststore password is required")
+	}
+
 	return nil
 }
 
 func executeHandler(event *types.Event) error {
-	log.Println("executing handler")
 	return nil
 }
