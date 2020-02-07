@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -12,6 +13,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/sensu-community/sensu-plugin-sdk/httpclient"
 	"github.com/sensu-community/sensu-plugin-sdk/sensu"
 	"github.com/sensu/sensu-go/types"
 )
@@ -172,11 +174,10 @@ func executeHandler(event *types.Event) error {
 		return err
 	}
 	if exists {
-		log.Print("puppet node exists")
 		return nil
 	}
 
-	return nil
+	return deregisterEntity(event)
 }
 
 // puppetNodeExists returns whether a given node exists in Puppet and any error
@@ -223,10 +224,51 @@ func puppetNodeExists(event *types.Event) (bool, error) {
 
 	// Determine if the node exists
 	if resp.StatusCode == http.StatusOK {
+		log.Printf("puppet node %q exists", name)
 		return true, nil
 	} else if resp.StatusCode == http.StatusNotFound {
+		log.Printf("puppet node %q does not exist", name)
 		return false, nil
 	}
 
 	return false, fmt.Errorf("unexpected HTTP status %s while querying PuppetDB", http.StatusText(resp.StatusCode))
+}
+
+func deregisterEntity(event *types.Event) error {
+	// First authenticate against the Sensu API
+	config := httpclient.CoreClientConfig{
+		URL:    handler.sensuAPIURL,
+		APIKey: handler.sensuAPIKey,
+	}
+	if handler.sensuCACert != "" {
+		asn1Data, err := ioutil.ReadFile(handler.sensuCACert)
+		if err != nil {
+			return fmt.Errorf("unable to load sensu-ca-cert: %s", err)
+		}
+		cert, err := x509.ParseCertificate(asn1Data)
+		if err != nil {
+			return fmt.Errorf("invalid sensu-ca-cert: %s", err)
+		}
+		config.CACert = cert
+
+	}
+	client := httpclient.NewCoreClient(config)
+	request, err := httpclient.NewResourceRequest("core/v2", "Entity", event.Entity.Namespace, event.Entity.Name)
+	if err != nil {
+		return err
+	}
+
+	// Delete the Sensu entity
+	log.Printf("deleting entity (%s/%s)\n", event.Entity.Namespace, event.Entity.Name)
+	if _, err := client.DeleteResource(context.Background(), request); err != nil {
+		if httperr, ok := err.(httpclient.HTTPError); ok {
+			if httperr.StatusCode < 500 {
+				log.Printf("entity already deleted (%s/%s)", event.Entity.Namespace, event.Entity.Name)
+				return nil
+			}
+		}
+		return err
+	}
+
+	return nil
 }
