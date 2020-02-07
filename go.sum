@@ -196,6 +196,10 @@ github.com/sensu-community/sensu-plugin-sdk v0.5.0 h1:riMWfYhtnDazNavhnOx2RU/QlK
 github.com/sensu-community/sensu-plugin-sdk v0.5.0/go.mod h1:Qkxx5GWZ99Hc5O6nZfBj4bNYjIDR8Qv2qobR3LSYAyA=
 github.com/sensu-community/sensu-plugin-sdk v0.5.1-0.20200205200245-9d11cf216bc0 h1:oSVSbEVmfDATbvUKlc3ERAposQr7or6FUcKLg6w27is=
 github.com/sensu-community/sensu-plugin-sdk v0.5.1-0.20200205200245-9d11cf216bc0/go.mod h1:Qkxx5GWZ99Hc5O6nZfBj4bNYjIDR8Qv2qobR3LSYAyA=
+github.com/sensu-community/sensu-plugin-sdk v0.5.1-0.20200206153623-a973644e147d h1:k2WN7X08sQ97e8GbytLHOZbLodRmfLY1R3Kw/s1CDsA=
+github.com/sensu-community/sensu-plugin-sdk v0.5.1-0.20200206153623-a973644e147d/go.mod h1:Qkxx5GWZ99Hc5O6nZfBj4bNYjIDR8Qv2qobR3LSYAyA=
+github.com/sensu-community/sensu-plugin-sdk v0.6.0 h1:ahYErlo3yfN7AlkkGX3TH1854hNXJ00MgUIW0sHaI3M=
+github.com/sensu-community/sensu-plugin-sdk v0.6.0/go.mod h1:Qkxx5GWZ99Hc5O6nZfBj4bNYjIDR8Qv2qobR3LSYAyA=
 github.com/sensu/lasr v1.2.1/go.mod h1:VIMtIK67Bcef6dTfctRCBg8EY9M9TtCY9NEFT6Zw5xQ=
 github.com/sensu/sensu-go v0.0.0-20190508172758-32aea478ae74 h1:j8X+G1s42GdIcVWvNcbVy1vN8bsX24DADOW8FfOupk0=
 github.com/sensu/sensu-go v0.0.0-20190508172758-32aea478ae74/go.mod h1:oP0w1f0WSgVPzGUhK5EmM774W/JaWEpj4zg9Kd972y8=

@@ -1,10 +1,16 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"net/url"
 	"path"
+	"strings"
 
 	"github.com/sensu-community/sensu-plugin-sdk/sensu"
 	"github.com/sensu/sensu-go/types"
@@ -13,17 +19,19 @@ import (
 // Handler represents the sensu-puppet-handler plugin
 type Handler struct {
 	sensu.PluginConfig
-	endpoint           string
-	keystoreFile       string
-	keystorePassword   string
-	truststoreFile     string
-	truststorePassword string
-	httpProxy          string
-	timeout            int
+	endpoint                 string
+	puppetCert               string
+	puppetKey                string
+	puppetCACert             string
+	puppetInsecureSkipVerify bool
+	sensuAPIURL              string
+	sensuAPIKey              string
+	sensuCACert              string
 }
 
 const (
-	defaultAPIPath = "pdb/query/v4/nodes"
+	defaultAPIPath      = "pdb/query/v4/nodes"
+	labelPuppetNodeName = "puppet_node_name"
 )
 
 var (
@@ -31,7 +39,6 @@ var (
 		PluginConfig: sensu.PluginConfig{
 			Name:     "sensu-puppet-handler",
 			Short:    "Deregister Sensu entities without an associated Puppet node",
-			Timeout:  10,
 			Keyspace: "sensu.io/plugins/sensu-puppet-handler/config",
 		},
 	}
@@ -46,46 +53,57 @@ var (
 			Value:     &handler.endpoint,
 		},
 		&sensu.PluginConfigOption{
-			Path:     "keystore_file",
-			Env:      "PUPPET_KEYSTORE_FILE",
-			Argument: "keystore_file",
-			Usage:    "the file path for the SSL certificate keystore",
-			Value:    &handler.keystoreFile,
+			Path:     "cert",
+			Env:      "PUPPET_CERT",
+			Argument: "cert",
+			Usage:    "path to the SSL certificate PEM file signed by your site's Puppet CA",
+			Value:    &handler.puppetCert,
 		},
 		&sensu.PluginConfigOption{
-			Path:     "keystore_password",
-			Env:      "PUPPET_KEYSTORE_PASSWORD",
-			Argument: "keystore_password",
-			Usage:    "the SSL certificate keystore password",
-			Value:    &handler.keystorePassword,
+			Path:     "key",
+			Env:      "PUPPET_KEY",
+			Argument: "key",
+			Usage:    "path to the private key PEM file for that certificate",
+			Value:    &handler.puppetKey,
 		},
 		&sensu.PluginConfigOption{
-			Path:     "truststore_file",
-			Env:      "PUPPET_TRUSTSTORE_FILE",
-			Argument: "truststore_file",
-			Usage:    "the file path for the SSL certificate truststore",
-			Value:    &handler.truststoreFile,
+			Path:     "cacert",
+			Env:      "PUPPET_CACERT",
+			Argument: "cacert",
+			Usage:    "path to the site's Puppet CA certificate PEM file",
+			Value:    &handler.puppetCACert,
 		},
 		&sensu.PluginConfigOption{
-			Path:     "truststore_password",
-			Env:      "PUPPET_TRUSTSTORE_PASSWORD",
-			Argument: "truststore_password",
-			Usage:    "the SSL certificate truststore password",
-			Value:    &handler.truststorePassword,
+			Path:     "insecure-skip-tls-verify",
+			Env:      "PUPPET_INSECURE_SKIP_TLS_VERIFY",
+			Argument: "insecure-skip-tls-verify",
+			Usage:    "skip SSL verification",
+			Value:    &handler.puppetInsecureSkipVerify,
 		},
-		&sensu.PluginConfigOption{
-			Path:     "http_proxy",
-			Env:      "PUPPET_HTTP_PROXY",
-			Argument: "http_proxy",
-			Usage:    "the URL of a proxy to be used for HTTP requests",
-			Value:    &handler.httpProxy,
+		{
+			Path:      "sensu-api-url",
+			Env:       "SENSU_API_URL",
+			Argument:  "sensu-api-url",
+			Shorthand: "u",
+			Default:   "http://localhost:8080",
+			Usage:     "The Sensu API URL",
+			Value:     &handler.sensuAPIURL,
 		},
-		&sensu.PluginConfigOption{
-			Path:     "timeout",
-			Env:      "PUPPET_TIMEOUT",
-			Argument: "timeout",
-			Usage:    "the handler execution duration timeout in seconds (hard stop)",
-			Value:    &handler.httpProxy,
+		{
+			Path:      "sensu-api-key",
+			Env:       "SENSU_API_KEY",
+			Argument:  "sensu-api-key",
+			Shorthand: "a",
+			Usage:     "The Sensu API key",
+			Value:     &handler.sensuAPIKey,
+		},
+		{
+			Path:      "sensu-ca-cert",
+			Env:       "SENSU_CA_CERT",
+			Argument:  "sensu-ca-cert",
+			Shorthand: "c",
+			Usage:     "The Sensu Go CA Certificate",
+			Value:     &handler.sensuCACert,
 		},
 	}
 )
@@ -95,25 +113,30 @@ func main() {
 	handler.Execute()
 }
 
-func validate(_ *types.Event) error {
-	// Make sure all required options are provided
-	if handler.endpoint == "" {
-		return errors.New("the PuppetDB API endpoint is required")
-	}
-	if handler.keystoreFile == "" {
-		return errors.New("the path to the SSL certificate keystore is required")
-	}
-	if handler.keystorePassword == "" {
-		return errors.New("the SSL certificate keystore password is required")
-	}
-	if handler.truststoreFile == "" {
-		return errors.New("the path for the SSL certificate truststore is required")
-	}
-	if handler.truststorePassword == "" {
-		return errors.New("the SSL certificate truststore password is required")
+func validate(event *types.Event) error {
+	// Make sure we have a valid event
+	if event.Check == nil || event.Entity == nil {
+		return errors.New("invalid event")
 	}
 
-	// Make sure the endpoint URL is valid
+	// Make sure all required options are provided
+	if len(handler.endpoint) == 0 {
+		return errors.New("the PuppetDB API endpoint is required")
+	}
+	if len(handler.puppetCert) == 0 {
+		return errors.New("the path to the SSL certificate is required")
+	}
+	if len(handler.puppetKey) == 0 {
+		return errors.New("the path to the private key is required")
+	}
+	if len(handler.sensuAPIURL) == 0 {
+		return errors.New("the Sensu API URL is required")
+	}
+	if len(handler.sensuAPIKey) == 0 {
+		return errors.New("the Sensu API key is required")
+	}
+
+	// Make sure the PuppetDB endpoint URL is valid
 	u, err := url.Parse(handler.endpoint)
 	if err != nil {
 		return fmt.Errorf("invalid PuppetDB API endpoint URL: %s", err)
@@ -126,9 +149,84 @@ func validate(_ *types.Event) error {
 		handler.endpoint = u.String()
 	}
 
+	// Make sure the Sensu API URL is valid
+	u, err = url.Parse(handler.sensuAPIURL)
+	if err != nil {
+		return fmt.Errorf("invalid Sensu API URL: %s", err)
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return errors.New("invalid Sensu API URL")
+	}
+
 	return nil
 }
 
 func executeHandler(event *types.Event) error {
+	if event.Check.Name != "keepalive" {
+		log.Print("received non-keepalive event, not checking for puppet node")
+		return nil
+	}
+
+	exists, err := puppetNodeExists(event)
+	if err != nil {
+		return err
+	}
+	if exists {
+		log.Print("puppet node exists")
+		return nil
+	}
+
 	return nil
+}
+
+// puppetNodeExists returns whether a given node exists in Puppet and any error
+// encountered. The Puppet node name defaults to the entity name but can be
+// overriden through the entity label "puppet_node_name"
+func puppetNodeExists(event *types.Event) (bool, error) {
+	// Determine the Puppet node name
+	name := event.Entity.Name
+	if event.Entity.Labels[labelPuppetNodeName] != "" {
+		name = event.Entity.Labels[labelPuppetNodeName]
+	}
+
+	// Load the public/private key pair
+	cert, err := tls.LoadX509KeyPair(handler.puppetCert, handler.puppetKey)
+	if err != nil {
+		return false, err
+	}
+
+	// Load the CA certificate
+	caCert, err := ioutil.ReadFile(handler.puppetCACert)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	// Setup the HTTPS client
+	tlsConfig := &tls.Config{
+		Certificates:       []tls.Certificate{cert},
+		RootCAs:            caCertPool,
+		InsecureSkipVerify: handler.puppetInsecureSkipVerify,
+	}
+	tlsConfig.BuildNameToCertificate()
+	client := &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}
+
+	// Get the puppet node
+	endpoint := strings.TrimRight(handler.endpoint, "/")
+	endpoint = fmt.Sprintf("%s/%s", endpoint, name)
+	resp, err := client.Get(endpoint)
+	if err != nil {
+		return false, err
+	}
+	_ = resp.Body.Close()
+
+	// Determine if the node exists
+	if resp.StatusCode == http.StatusOK {
+		return true, nil
+	} else if resp.StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+
+	return false, fmt.Errorf("unexpected HTTP status %s while querying PuppetDB", http.StatusText(resp.StatusCode))
 }
