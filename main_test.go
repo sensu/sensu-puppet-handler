@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/sensu/sensu-go/types"
@@ -129,6 +131,87 @@ func Test_validate(t *testing.T) {
 
 			if tt.wantEndpoint != "" && tt.wantEndpoint != handler.endpoint {
 				t.Errorf("validate() endpoint = %v, want %v", handler.endpoint, tt.wantEndpoint)
+			}
+		})
+	}
+}
+
+func Test_puppetNodeExists(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		want       bool
+		wantErr    bool
+	}{
+		{
+			name:       "node exists",
+			statusCode: http.StatusOK,
+			want:       true,
+		},
+		{
+			name:       "node does not exist",
+			statusCode: http.StatusNotFound,
+			want:       false,
+		},
+		{
+			name:       "unexpected status code",
+			statusCode: http.StatusInternalServerError,
+			want:       false,
+			wantErr:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tt.statusCode)
+			}))
+			defer ts.Close()
+			handler.endpoint = ts.URL
+
+			event := types.FixtureEvent("foo", "check-cpu")
+			got, err := puppetNodeExists(ts.Client(), event)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("puppetNodeExists() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("puppetNodeExists() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_deregisterEntity(t *testing.T) {
+	tests := []struct {
+		name       string
+		statusCode int
+		wantErr    bool
+	}{
+		{
+			name:       "entity deleted",
+			statusCode: http.StatusNoContent,
+		},
+		{
+			name:       "entity not deleted",
+			statusCode: http.StatusNotFound,
+		},
+		{
+			name:       "unexpected status code",
+			statusCode: http.StatusInternalServerError,
+			wantErr:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tt.statusCode)
+			}))
+			defer ts.Close()
+			handler.sensuAPIURL = ts.URL
+
+			event := types.FixtureEvent("foo", "check-cpu")
+			if err := deregisterEntity(event); (err != nil) != tt.wantErr {
+				t.Errorf("deregisterEntity() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

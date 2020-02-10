@@ -169,7 +169,12 @@ func executeHandler(event *types.Event) error {
 		return nil
 	}
 
-	exists, err := puppetNodeExists(event)
+	puppetClient, err := puppetHTTPClient()
+	if err != nil {
+		return err
+	}
+
+	exists, err := puppetNodeExists(puppetClient, event)
 	if err != nil {
 		return err
 	}
@@ -180,26 +185,18 @@ func executeHandler(event *types.Event) error {
 	return deregisterEntity(event)
 }
 
-// puppetNodeExists returns whether a given node exists in Puppet and any error
-// encountered. The Puppet node name defaults to the entity name but can be
-// overriden through the entity label "puppet_node_name"
-func puppetNodeExists(event *types.Event) (bool, error) {
-	// Determine the Puppet node name
-	name := event.Entity.Name
-	if event.Entity.Labels[labelPuppetNodeName] != "" {
-		name = event.Entity.Labels[labelPuppetNodeName]
-	}
-
+// puppetHTTPClient configures an HTTP client for PuppetDB
+func puppetHTTPClient() (*http.Client, error) {
 	// Load the public/private key pair
 	cert, err := tls.LoadX509KeyPair(handler.puppetCert, handler.puppetKey)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
 	// Load the CA certificate
 	caCert, err := ioutil.ReadFile(handler.puppetCACert)
 	if err != nil {
-		log.Println(err.Error())
+		return nil, err
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -212,6 +209,19 @@ func puppetNodeExists(event *types.Event) (bool, error) {
 	}
 	tlsConfig.BuildNameToCertificate()
 	client := &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}
+
+	return client, nil
+}
+
+// puppetNodeExists returns whether a given node exists in Puppet and any error
+// encountered. The Puppet node name defaults to the entity name but can be
+// overriden through the entity label "puppet_node_name"
+func puppetNodeExists(client *http.Client, event *types.Event) (bool, error) {
+	// Determine the Puppet node name
+	name := event.Entity.Name
+	if event.Entity.Labels[labelPuppetNodeName] != "" {
+		name = event.Entity.Labels[labelPuppetNodeName]
+	}
 
 	// Get the puppet node
 	endpoint := strings.TrimRight(handler.endpoint, "/")
