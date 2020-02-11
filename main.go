@@ -236,7 +236,6 @@ func puppetNodeExists(client *http.Client, event *types.Event) (bool, error) {
 	if handler.puppetNodeName == "" {
 		name = event.Entity.Name
 	}
-	fmt.Println(name)
 
 	// Get the puppet node
 	endpoint := strings.TrimRight(handler.endpoint, "/")
