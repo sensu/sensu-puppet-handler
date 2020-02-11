@@ -7,6 +7,8 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.2.0] - 2020-02-11
+
 ### Changed
 - The Puppet node name can now be overridden using entities annotations
 
