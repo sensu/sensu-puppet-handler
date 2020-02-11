@@ -29,12 +29,13 @@ Available Commands:
   version     Print the version number of this plugin
 
 Flags:
-      --cacert string              path to the site's Puppet CA certificate PEM file
+      --ca-cert string             path to the site's Puppet CA certificate PEM file
       --cert string                path to the SSL certificate PEM file signed by your site's Puppet CA
   -e, --endpoint string            the PuppetDB API endpoint (URL). If an API path is not specified, /pdb/query/v4/nodes/ will be used
   -h, --help                       help for sensu-puppet-handler
       --insecure-skip-tls-verify   skip SSL verification
       --key string                 path to the private key PEM file for that certificate
+      --node-name string           node name to use for the entity when querying PuppetDB
   -a, --sensu-api-key string       The Sensu API key
   -u, --sensu-api-url string       The Sensu API URL (default "http://localhost:8080")
   -c, --sensu-ca-cert string       The Sensu Go CA Certificate
@@ -96,11 +97,22 @@ spec:
   type: set
 ```
 
-
 ### Check definition
 
 No check definition is needed. This handler will only trigger on keepalive
 events after it is added to the keepalive handler set.
+
+### Puppet node name
+
+When querying PuppetDB for a node, by default, Sensu will use the Sensu entity’s
+name for the Puppet node name. Individual Sensu entities can override the name
+of their corresponding Puppet node, using annotations:
+
+```yml
+# /etc/sensu/agent.yml example
+annotations:
+  sensu.io/plugins/sensu-puppet-handler/config/node-name: webserver01.example.com
+```
 
 ## Installing from source and contributing
 

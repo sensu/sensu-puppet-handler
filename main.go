@@ -26,14 +26,14 @@ type Handler struct {
 	puppetKey                string
 	puppetCACert             string
 	puppetInsecureSkipVerify bool
+	puppetNodeName           string
 	sensuAPIURL              string
 	sensuAPIKey              string
 	sensuCACert              string
 }
 
 const (
-	defaultAPIPath      = "pdb/query/v4/nodes"
-	labelPuppetNodeName = "puppet_node_name"
+	defaultAPIPath = "pdb/query/v4/nodes"
 )
 
 var (
@@ -81,6 +81,13 @@ var (
 			Argument: "insecure-skip-tls-verify",
 			Usage:    "skip SSL verification",
 			Value:    &handler.puppetInsecureSkipVerify,
+		},
+		&sensu.PluginConfigOption{
+			Path:     "node-name",
+			Env:      "PUPPET_NODE_NAME",
+			Argument: "node-name",
+			Usage:    "node name to use for the entity when querying PuppetDB",
+			Value:    &handler.puppetNodeName,
 		},
 		{
 			Path:      "sensu-api-url",
@@ -196,13 +203,13 @@ func puppetHTTPClient() (*http.Client, error) {
 	// Load the public/private key pair
 	cert, err := tls.LoadX509KeyPair(handler.puppetCert, handler.puppetKey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not read the certificate/key: %s", err)
 	}
 
 	// Load the CA certificate
 	caCert, err := ioutil.ReadFile(handler.puppetCACert)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not read the CA certificate: %s", err)
 	}
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
@@ -223,10 +230,11 @@ func puppetHTTPClient() (*http.Client, error) {
 // encountered. The Puppet node name defaults to the entity name but can be
 // overriden through the entity label "puppet_node_name"
 func puppetNodeExists(client *http.Client, event *types.Event) (bool, error) {
-	// Determine the Puppet node name
-	name := event.Entity.Name
-	if event.Entity.Labels[labelPuppetNodeName] != "" {
-		name = event.Entity.Labels[labelPuppetNodeName]
+	// Determine the Puppet node name via the annotations and fallback to the
+	// entity name
+	name := handler.puppetNodeName
+	if handler.puppetNodeName == "" {
+		name = event.Entity.Name
 	}
 
 	// Get the puppet node
