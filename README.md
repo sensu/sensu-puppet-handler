@@ -72,11 +72,13 @@ spec:
   - PUPPET_CERT=/path/to/puppet/cert.pem
   - PUPPET_KEY=/path/to/puppet/key.pem
   - PUPPET_CA_CERT=/path/to/puppet/ca.pem
-  - SENSU_API_KEY=sensu-api-key-here
   filters:
   - is_incident
   runtime_assets:
   - sensu/sensu-puppet-handler
+  secrets:
+  - name: SENSU_API_KEY
+    secret: sensu-api-key
 ```
 
 and then add the handler to the keepalive handler set:
