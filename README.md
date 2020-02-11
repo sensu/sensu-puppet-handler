@@ -12,8 +12,8 @@
 ## Overview
 
 The [Sensu Puppet Keepalive Handler][0] is a [Sensu Event Handler][3] that will
-delete an entity with a failing keepalive check when its corresponding [Puppet][2]
-node no longer exists.
+delete an entity with a failing keepalive check when its corresponding
+[Puppet][2] node no longer exists or is deregistered.
 
 ## Usage examples
 
@@ -29,13 +29,13 @@ Available Commands:
   version     Print the version number of this plugin
 
 Flags:
-      --cacert string              path to the site's Puppet CA certificate PEM file (default "ca.pem")
-      --cert string                path to the SSL certificate PEM file signed by your site's Puppet CA (default "cert.pem")
-  -e, --endpoint string            the PuppetDB API endpoint (URL). If an API path is not specified, /pdb/query/v4/nodes/ will be used (default "https://10.73.10.116:8081")
+      --cacert string              path to the site's Puppet CA certificate PEM file
+      --cert string                path to the SSL certificate PEM file signed by your site's Puppet CA
+  -e, --endpoint string            the PuppetDB API endpoint (URL). If an API path is not specified, /pdb/query/v4/nodes/ will be used
   -h, --help                       help for sensu-puppet-handler
       --insecure-skip-tls-verify   skip SSL verification
-      --key string                 path to the private key PEM file for that certificate (default "key.pem")
-  -a, --sensu-api-key string       The Sensu API key (default "84e13d58-62fe-4236-b77d-ccc369ec5b1a")
+      --key string                 path to the private key PEM file for that certificate
+  -a, --sensu-api-key string       The Sensu API key
   -u, --sensu-api-url string       The Sensu API URL (default "http://localhost:8080")
   -c, --sensu-ca-cert string       The Sensu Go CA Certificate
 ```
@@ -71,7 +71,7 @@ spec:
   - PUPPET_ENDPOINT=https://puppetdb-host:8081
   - PUPPET_CERT=/path/to/puppet/cert.pem
   - PUPPET_KEY=/path/to/puppet/key.pem
-  - PUPPET_CACERT=/path/to/puppet/ca.pem
+  - PUPPET_CA_CERT=/path/to/puppet/ca.pem
   - SENSU_API_KEY=sensu-api-key-here
   filters:
   - is_incident
@@ -109,7 +109,7 @@ or create an executable script from this source.
 
 From the local path of the sensu-puppet-handler repository:
 ```
-go build -o /usr/local/bin/ .
+go build
 ```
 
 To contribute to this plugin, see [CONTRIBUTING](https://github.com/sensu/sensu-go/blob/master/CONTRIBUTING.md)

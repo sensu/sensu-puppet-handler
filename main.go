@@ -69,9 +69,9 @@ var (
 			Value:    &handler.puppetKey,
 		},
 		&sensu.PluginConfigOption{
-			Path:     "cacert",
-			Env:      "PUPPET_CACERT",
-			Argument: "cacert",
+			Path:     "ca-cert",
+			Env:      "PUPPET_CA_CERT",
+			Argument: "ca-cert",
 			Usage:    "path to the site's Puppet CA certificate PEM file",
 			Value:    &handler.puppetCACert,
 		},
@@ -143,21 +143,27 @@ func validate(event *types.Event) error {
 	if err != nil {
 		return fmt.Errorf("invalid PuppetDB API endpoint URL: %s", err)
 	}
-	if u.Scheme == "" || u.Host == "" {
+	if u.Scheme == "" {
+		u.Host = "https://"
+	}
+	if u.Host == "" {
 		return errors.New("invalid PuppetDB API endpoint URL")
 	}
 	if u.Path == "" || u.Path == "/" {
 		u.Path = path.Join(u.Path, defaultAPIPath)
-		handler.endpoint = u.String()
 	}
+	handler.endpoint = u.String()
 
 	// Make sure the Sensu API URL is valid
 	u, err = url.Parse(handler.sensuAPIURL)
 	if err != nil {
 		return fmt.Errorf("invalid Sensu API URL: %s", err)
 	}
-	if u.Scheme == "" || u.Host == "" {
-		return errors.New("invalid Sensu API URL")
+	if u.Scheme == "" {
+		return errors.New("invalid Sensu API URL, missing scheme")
+	}
+	if u.Host == "" {
+		return errors.New("invalid Sensu API URL, missing host")
 	}
 
 	return nil

@@ -8,9 +8,6 @@ import (
 	"github.com/sensu/sensu-go/types"
 )
 
-func TestMain(t *testing.T) {
-}
-
 func Test_validate(t *testing.T) {
 	event := types.FixtureEvent("foo", "bar")
 
