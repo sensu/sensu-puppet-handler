@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -241,6 +242,17 @@ func puppetNodeExists(client *http.Client, event *types.Event) (bool, error) {
 	endpoint := strings.TrimRight(handler.endpoint, "/")
 	endpoint = fmt.Sprintf("%s/%s", endpoint, name)
 	resp, err := client.Get(endpoint)
+	body, err := ioutil.ReadAll(resp.Body)
+	payload := string(body)
+	var info map[string]interface{}
+	json.Unmarshal([]byte(payload), &info)
+	nodeInfo := make(map[string]interface{})
+	errs := json.Unmarshal([]byte(payload), &nodeInfo)
+	if errs != nil {
+			panic(err)
+	}
+	timeDeactivated := nodeInfo["deactivated"]
+
 	if err != nil {
 		return false, err
 	}
@@ -248,8 +260,12 @@ func puppetNodeExists(client *http.Client, event *types.Event) (bool, error) {
 
 	// Determine if the node exists
 	if resp.StatusCode == http.StatusOK {
-		log.Printf("puppet node %q exists", name)
-		return true, nil
+		log.Printf("puppet node %q exists, checking if deactivated", name)
+		if timeDeactivated != nil {
+			return false, nil
+		} else {
+			return true, nil
+		}
 	} else if resp.StatusCode == http.StatusNotFound {
 		log.Printf("puppet node %q does not exist", name)
 		return false, nil
