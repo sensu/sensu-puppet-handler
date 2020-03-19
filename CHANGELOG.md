@@ -7,6 +7,10 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.3.0] - 2020-03-19
+- The handler now checks for the "deactivated" attribute after requesting node
+information, and uses its presence to determine if the node does not exist.
+
 ## [0.2.0] - 2020-02-11
 
 ### Changed
