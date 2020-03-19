@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/sensu/sensu-go/types"
 )
@@ -161,6 +163,9 @@ func Test_puppetNodeExists(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tt.statusCode)
+				if tt.statusCode == http.StatusOK {
+					_ = json.NewEncoder(w).Encode(map[string]interface{}{"deactivated": time.Now().Unix()})
+				}
 			}))
 			defer ts.Close()
 			handler.endpoint = ts.URL

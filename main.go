@@ -242,24 +242,22 @@ func puppetNodeExists(client *http.Client, event *types.Event) (bool, error) {
 	endpoint := strings.TrimRight(handler.endpoint, "/")
 	endpoint = fmt.Sprintf("%s/%s", endpoint, name)
 	resp, err := client.Get(endpoint)
-	body, err := ioutil.ReadAll(resp.Body)
-	payload := string(body)
-	var info map[string]interface{}
-	json.Unmarshal([]byte(payload), &info)
-	nodeInfo := make(map[string]interface{})
-	errs := json.Unmarshal([]byte(payload), &nodeInfo)
-	if errs != nil {
-			panic(err)
-	}
-	timeDeactivated := nodeInfo["deactivated"]
-
 	if err != nil {
+		log.Printf("error getting puppet node: %s", err)
 		return false, err
 	}
-	_ = resp.Body.Close()
+	defer resp.Body.Close()
 
 	// Determine if the node exists
 	if resp.StatusCode == http.StatusOK {
+		var info map[string]interface{}
+		if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+			log.Printf("puppet node returned invalid response: %s", err)
+			return false, err
+		}
+		nodeInfo := make(map[string]interface{})
+		timeDeactivated := nodeInfo["deactivated"]
+
 		log.Printf("puppet node %q exists, checking if deactivated", name)
 		if timeDeactivated != nil {
 			return false, nil
