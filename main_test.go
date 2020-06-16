@@ -7,16 +7,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sensu/sensu-go/types"
+	corev2 "github.com/sensu/sensu-go/api/core/v2"
 )
 
 func Test_validate(t *testing.T) {
-	event := types.FixtureEvent("foo", "bar")
+	event := corev2.FixtureEvent("foo", "bar")
 
 	tests := []struct {
 		name         string
 		testHandler  Handler
-		event        *types.Event
+		event        *corev2.Event
 		wantEndpoint string
 		wantErr      bool
 	}{
@@ -117,7 +117,7 @@ func Test_validate(t *testing.T) {
 		{
 			name:        "valid event is required",
 			testHandler: Handler{},
-			event:       &types.Event{},
+			event:       &corev2.Event{},
 			wantErr:     true,
 		},
 	}
@@ -170,7 +170,7 @@ func Test_puppetNodeExists(t *testing.T) {
 			defer ts.Close()
 			handler.endpoint = ts.URL
 
-			event := types.FixtureEvent("foo", "check-cpu")
+			event := corev2.FixtureEvent("foo", "check-cpu")
 			got, err := puppetNodeExists(ts.Client(), event)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("puppetNodeExists() error = %v, wantErr %v", err, tt.wantErr)
@@ -211,7 +211,7 @@ func Test_deregisterEntity(t *testing.T) {
 			defer ts.Close()
 			handler.sensuAPIURL = ts.URL
 
-			event := types.FixtureEvent("foo", "check-cpu")
+			event := corev2.FixtureEvent("foo", "check-cpu")
 			if err := deregisterEntity(event); (err != nil) != tt.wantErr {
 				t.Errorf("deregisterEntity() error = %v, wantErr %v", err, tt.wantErr)
 			}

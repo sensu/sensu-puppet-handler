@@ -16,7 +16,7 @@ import (
 
 	"github.com/sensu-community/sensu-plugin-sdk/httpclient"
 	"github.com/sensu-community/sensu-plugin-sdk/sensu"
-	"github.com/sensu/sensu-go/types"
+	corev2 "github.com/sensu/sensu-go/api/core/v2"
 )
 
 // Handler represents the sensu-puppet-handler plugin
@@ -47,7 +47,7 @@ var (
 	}
 
 	options = []*sensu.PluginConfigOption{
-		&sensu.PluginConfigOption{
+		{
 			Path:      "endpoint",
 			Env:       "PUPPET_ENDPOINT",
 			Argument:  "endpoint",
@@ -55,35 +55,35 @@ var (
 			Usage:     "the PuppetDB API endpoint (URL). If an API path is not specified, /pdb/query/v4/nodes/ will be used",
 			Value:     &handler.endpoint,
 		},
-		&sensu.PluginConfigOption{
+		{
 			Path:     "cert",
 			Env:      "PUPPET_CERT",
 			Argument: "cert",
 			Usage:    "path to the SSL certificate PEM file signed by your site's Puppet CA",
 			Value:    &handler.puppetCert,
 		},
-		&sensu.PluginConfigOption{
+		{
 			Path:     "key",
 			Env:      "PUPPET_KEY",
 			Argument: "key",
 			Usage:    "path to the private key PEM file for that certificate",
 			Value:    &handler.puppetKey,
 		},
-		&sensu.PluginConfigOption{
+		{
 			Path:     "ca-cert",
 			Env:      "PUPPET_CA_CERT",
 			Argument: "ca-cert",
 			Usage:    "path to the site's Puppet CA certificate PEM file",
 			Value:    &handler.puppetCACert,
 		},
-		&sensu.PluginConfigOption{
+		{
 			Path:     "insecure-skip-tls-verify",
 			Env:      "PUPPET_INSECURE_SKIP_TLS_VERIFY",
 			Argument: "insecure-skip-tls-verify",
 			Usage:    "skip SSL verification",
 			Value:    &handler.puppetInsecureSkipVerify,
 		},
-		&sensu.PluginConfigOption{
+		{
 			Path:     "node-name",
 			Env:      "PUPPET_NODE_NAME",
 			Argument: "node-name",
@@ -119,11 +119,11 @@ var (
 )
 
 func main() {
-	handler := sensu.NewGoHandler(&handler.PluginConfig, options, validate, executeHandler)
+	handler := sensu.NewEnterpriseGoHandler(&handler.PluginConfig, options, validate, executeHandler)
 	handler.Execute()
 }
 
-func validate(event *types.Event) error {
+func validate(event *corev2.Event) error {
 	// Make sure we have a valid event
 	if event.Check == nil || event.Entity == nil {
 		return errors.New("invalid event")
@@ -177,7 +177,7 @@ func validate(event *types.Event) error {
 	return nil
 }
 
-func executeHandler(event *types.Event) error {
+func executeHandler(event *corev2.Event) error {
 	if event.Check.Name != "keepalive" {
 		log.Print("received non-keepalive event, not checking for puppet node")
 		return nil
@@ -230,7 +230,7 @@ func puppetHTTPClient() (*http.Client, error) {
 // puppetNodeExists returns whether a given node exists in Puppet and any error
 // encountered. The Puppet node name defaults to the entity name but can be
 // overriden through the entity label "puppet_node_name"
-func puppetNodeExists(client *http.Client, event *types.Event) (bool, error) {
+func puppetNodeExists(client *http.Client, event *corev2.Event) (bool, error) {
 	// Determine the Puppet node name via the annotations and fallback to the
 	// entity name
 	name := handler.puppetNodeName
@@ -261,9 +261,8 @@ func puppetNodeExists(client *http.Client, event *types.Event) (bool, error) {
 		log.Printf("puppet node %q exists, checking if deactivated", name)
 		if timeDeactivated != nil {
 			return false, nil
-		} else {
-			return true, nil
 		}
+		return true, nil
 	} else if resp.StatusCode == http.StatusNotFound {
 		log.Printf("puppet node %q does not exist", name)
 		return false, nil
@@ -272,7 +271,7 @@ func puppetNodeExists(client *http.Client, event *types.Event) (bool, error) {
 	return false, fmt.Errorf("unexpected HTTP status %s while querying PuppetDB", http.StatusText(resp.StatusCode))
 }
 
-func deregisterEntity(event *types.Event) error {
+func deregisterEntity(event *corev2.Event) error {
 	// First authenticate against the Sensu API
 	config := httpclient.CoreClientConfig{
 		URL:    handler.sensuAPIURL,
