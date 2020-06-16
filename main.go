@@ -221,7 +221,6 @@ func puppetHTTPClient() (*http.Client, error) {
 		RootCAs:            caCertPool,
 		InsecureSkipVerify: handler.puppetInsecureSkipVerify,
 	}
-	tlsConfig.BuildNameToCertificate()
 	client := &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConfig}}
 
 	return client, nil
