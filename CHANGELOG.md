@@ -7,6 +7,8 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.4.0] - 2022-12-02
+
 ### Changed
 - Update Sensu Go and SDK dependencies with the correct modules
 - Support PEM certificate
