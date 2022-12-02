@@ -9,6 +9,7 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ### Changed
 - Update Sensu Go and SDK dependencies with the correct modules
+- Support PEM certificate
 
 ## [0.3.0] - 2020-03-19
 - The handler now checks for the "deactivated" attribute after requesting node

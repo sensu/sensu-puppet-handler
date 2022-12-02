@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -277,11 +278,17 @@ func deregisterEntity(event *corev2.Event) error {
 		APIKey: handler.sensuAPIKey,
 	}
 	if handler.sensuCACert != "" {
-		asn1Data, err := ioutil.ReadFile(handler.sensuCACert)
+		pemCert, err := ioutil.ReadFile(handler.sensuCACert)
 		if err != nil {
 			return fmt.Errorf("unable to load sensu-ca-cert: %s", err)
 		}
-		cert, err := x509.ParseCertificate(asn1Data)
+
+		block, _ := pem.Decode([]byte(pemCert))
+		if block == nil {
+			panic("failed to parse certificate PEM")
+		}
+
+		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
 			return fmt.Errorf("invalid sensu-ca-cert: %s", err)
 		}
