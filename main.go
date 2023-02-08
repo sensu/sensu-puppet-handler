@@ -285,7 +285,7 @@ func deregisterEntity(event *corev2.Event) error {
 
 		block, _ := pem.Decode([]byte(pemCert))
 		if block == nil {
-			panic("failed to parse certificate PEM")
+			return errors.New("failed to decode sensu-ca-cert PEM")
 		}
 
 		cert, err := x509.ParseCertificate(block.Bytes)
