@@ -15,9 +15,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/sensu-community/sensu-plugin-sdk/httpclient"
-	"github.com/sensu-community/sensu-plugin-sdk/sensu"
-	corev2 "github.com/sensu/sensu-go/api/core/v2"
+	corev2 "github.com/sensu/core/v2"
+	"github.com/sensu/sensu-plugin-sdk/httpclient"
+	"github.com/sensu/sensu-plugin-sdk/sensu"
 )
 
 // Handler represents the sensu-puppet-handler plugin
@@ -47,8 +47,8 @@ var (
 		},
 	}
 
-	options = []*sensu.PluginConfigOption{
-		{
+	options = []sensu.ConfigOption{
+		&sensu.PluginConfigOption[string]{
 			Path:      "endpoint",
 			Env:       "PUPPET_ENDPOINT",
 			Argument:  "endpoint",
@@ -56,42 +56,42 @@ var (
 			Usage:     "the PuppetDB API endpoint (URL). If an API path is not specified, /pdb/query/v4/nodes/ will be used",
 			Value:     &handler.endpoint,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:     "cert",
 			Env:      "PUPPET_CERT",
 			Argument: "cert",
 			Usage:    "path to the SSL certificate PEM file signed by your site's Puppet CA",
 			Value:    &handler.puppetCert,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:     "key",
 			Env:      "PUPPET_KEY",
 			Argument: "key",
 			Usage:    "path to the private key PEM file for that certificate",
 			Value:    &handler.puppetKey,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:     "ca-cert",
 			Env:      "PUPPET_CA_CERT",
 			Argument: "ca-cert",
 			Usage:    "path to the site's Puppet CA certificate PEM file",
 			Value:    &handler.puppetCACert,
 		},
-		{
+		&sensu.PluginConfigOption[bool]{
 			Path:     "insecure-skip-tls-verify",
 			Env:      "PUPPET_INSECURE_SKIP_TLS_VERIFY",
 			Argument: "insecure-skip-tls-verify",
 			Usage:    "skip SSL verification",
 			Value:    &handler.puppetInsecureSkipVerify,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:     "node-name",
 			Env:      "PUPPET_NODE_NAME",
 			Argument: "node-name",
 			Usage:    "node name to use for the entity when querying PuppetDB",
 			Value:    &handler.puppetNodeName,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:      "sensu-api-url",
 			Env:       "SENSU_API_URL",
 			Argument:  "sensu-api-url",
@@ -100,7 +100,7 @@ var (
 			Usage:     "The Sensu API URL",
 			Value:     &handler.sensuAPIURL,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:      "sensu-api-key",
 			Env:       "SENSU_API_KEY",
 			Argument:  "sensu-api-key",
@@ -108,7 +108,7 @@ var (
 			Usage:     "The Sensu API key",
 			Value:     &handler.sensuAPIKey,
 		},
-		{
+		&sensu.PluginConfigOption[string]{
 			Path:      "sensu-ca-cert",
 			Env:       "SENSU_CA_CERT",
 			Argument:  "sensu-ca-cert",
