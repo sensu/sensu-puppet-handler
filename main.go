@@ -81,7 +81,7 @@ var (
 			Path:     "insecure-skip-tls-verify",
 			Env:      "PUPPET_INSECURE_SKIP_TLS_VERIFY",
 			Argument: "insecure-skip-tls-verify",
-			Usage:    "skip SSL verification",
+			Usage:    "skip TLS verification for Puppet and sensu-backend",
 			Value:    &handler.puppetInsecureSkipVerify,
 		},
 		&sensu.PluginConfigOption[string]{
@@ -294,6 +294,9 @@ func deregisterEntity(event *corev2.Event) error {
 		}
 		config.CACert = cert
 
+	}
+	if handler.puppetInsecureSkipVerify {
+		config.InsecureSkipVerify = true
 	}
 	client := httpclient.NewCoreClient(config)
 	request, err := httpclient.NewResourceRequest("core/v2", "Entity", event.Entity.Namespace, event.Entity.Name)

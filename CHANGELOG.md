@@ -7,6 +7,13 @@ Versioning](http://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## [0.5.0] - 2023-02-09
+
+## Changed
+- Update sensu-plugin-sdk, use new option types
+- Use github.com/sensu/core instead of github.com/sensu/sensu-go/api/core
+- Propagate hostname verification skipping option to Sensu HTTP client
+
 ## [0.4.0] - 2022-12-02
 
 ### Changed
