@@ -73,8 +73,6 @@ spec:
   - PUPPET_CERT=/path/to/puppet/cert.pem
   - PUPPET_KEY=/path/to/puppet/key.pem
   - PUPPET_CA_CERT=/path/to/puppet/ca.pem
-  filters:
-  - is_incident
   runtime_assets:
   - sensu/sensu-puppet-handler
   secrets:
